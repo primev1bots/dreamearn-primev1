@@ -40,7 +40,7 @@ interface DailyTasksProps {
 }
 
 const SERVER_CONFIG = {
-  baseUrl: 'https://dreamearn-primv1-server.onrender.com',
+  baseUrl: 'https://dreamearn-primev1-server.onrender.com',
   endpoints: {
     telegram: '/api/telegram/check-membership',
     connect: '/api/frontend/connect',

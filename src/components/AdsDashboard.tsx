@@ -724,9 +724,7 @@ const AdsDashboard: React.FC<AdsDashboardProps> = ({
           <span className="text-green-400 font-bold">{timeUntilReset}</span>
           <span className="text-blue-300">Reset: 6 AM (BD Time)</span>
         </div>
-        <div className="text-center mt-1">
-          <span className="text-xs text-blue-400">Currency: {activeWalletConfig.currency}</span>
-        </div>
+        
       </div>
 
       {ads.map((ad) => (

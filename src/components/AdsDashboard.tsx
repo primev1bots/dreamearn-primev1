@@ -36,9 +36,14 @@ interface Ad {
   lastWatched?: Date;
 }
 
+interface WalletConfig {
+  currency: string;
+  currencySymbol: string;
+}
+
 interface AdsDashboardProps {
   userData?: UserData | null;
-  walletConfig?: { currency: string; currencySymbol: string };
+  walletConfig?: WalletConfig;
 }
 
 // ==== Globals (from providers' scripts & index.html) ====
@@ -96,13 +101,37 @@ const AdsDashboard: React.FC<AdsDashboardProps> = ({
   const [userMessages, setUserMessages] = React.useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [concurrentLock, setConcurrentLock] = React.useState<boolean>(false);
   const [timeUntilReset, setTimeUntilReset] = React.useState<string>('24:00:00');
+  const [fetchedWalletConfig, setFetchedWalletConfig] = React.useState<WalletConfig>(walletConfig);
 
   const database = getDatabase();
+
+  // ==== Fetch wallet config from Firebase ====
+  React.useEffect(() => {
+    const walletConfigRef = ref(database, 'walletConfig');
+    const unsubscribe = onValue(walletConfigRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const config = snapshot.val() as WalletConfig;
+        setFetchedWalletConfig({
+          currency: config.currency || 'USDT',
+          currencySymbol: config.currencySymbol || ''
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, [database]);
+
+  // Use fetched wallet config if available, otherwise use props
+  const activeWalletConfig = fetchedWalletConfig.currency ? fetchedWalletConfig : walletConfig;
 
   // ==== Utils ====
   const showMessage = (type: 'success' | 'error' | 'info', message: string) => {
     setUserMessages({ type, message });
     setTimeout(() => setUserMessages(null), 4000);
+  };
+
+  // Format currency display
+  const formatCurrency = (amount: number): string => {
+    return `${activeWalletConfig.currencySymbol}${amount.toFixed(2)}`;
   };
 
   const getBangladeshTime = (): Date => {
@@ -265,7 +294,7 @@ const AdsDashboard: React.FC<AdsDashboardProps> = ({
             enabled: cfg.enabled !== false,
             waitTime: cfg.waitTime ?? ad.waitTime,
             appId: cfg.appId ?? ad.appId,
-            description: `${walletConfig.currency} ${cfg.reward ?? ad.reward} per ad`,
+            description: `${formatCurrency(cfg.reward ?? ad.reward)} per ad`,
           };
         })
       );
@@ -280,7 +309,7 @@ const AdsDashboard: React.FC<AdsDashboardProps> = ({
       }));
     });
     return () => unsubscribe();
-  }, [database, walletConfig.currency]);
+  }, [database, activeWalletConfig.currencySymbol]);
 
   // ==== Load user's ad watch history ====
   React.useEffect(() => {
@@ -519,7 +548,7 @@ const AdsDashboard: React.FC<AdsDashboardProps> = ({
   const handleAdCompletion = async (adId: number) => {
     await updateUserAdWatch(adId);
     const earned = await recordAdWatch(adId);
-    if (earned > 0) showMessage('success', `Ad completed! You earned ${walletConfig.currencySymbol} ${earned}`);
+    if (earned > 0) showMessage('success', `Ad completed! You earned ${formatCurrency(earned)}`);
   };
 
   const formatTime = (sec: number): string => (sec < 60 ? `${sec}s` : `${Math.floor(sec / 60)}m ${sec % 60}s`);
@@ -694,6 +723,9 @@ const AdsDashboard: React.FC<AdsDashboardProps> = ({
           <span className="text-blue-300">Daily reset in:</span>
           <span className="text-green-400 font-bold">{timeUntilReset}</span>
           <span className="text-blue-300">Reset: 6 AM (BD Time)</span>
+        </div>
+        <div className="text-center mt-1">
+          <span className="text-xs text-blue-400">Currency: {activeWalletConfig.currency}</span>
         </div>
       </div>
 

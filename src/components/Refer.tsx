@@ -51,10 +51,11 @@ interface AppConfig {
   supportUrl: string;
   tutorialVideoId: string;
   referralCommissionRate?: number;
-  walletConfig?: {
-    currency: string;
-    currencySymbol: string;
-  };
+}
+
+interface WalletConfig {
+  currency: string;
+  currencySymbol: string;
 }
 
 // In ReferPage component
@@ -62,22 +63,18 @@ interface ReferPageProps {
   userId: string;
   referralData: ReferralData | null;
   userData?: UserData | null;
-  walletConfig?: {
-    currency: string;
-    currencySymbol: string;
-  };
 }
 
-const ReferPage: React.FC<ReferPageProps> = ({ userId, walletConfig }) => {
+const ReferPage: React.FC<ReferPageProps> = ({ userId }) => {
   const [referrals, setReferrals] = useState<ReferUser[]>([]);
   const [referralStats, setReferralStats] = useState({ referredCount: 0, referralEarnings: 0 });
   const [, setUserData] = useState<UserData | null>(null);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [commissionRate, setCommissionRate] = useState<number>(10); // Default to 10%
-  const [appWalletConfig, setAppWalletConfig] = useState<{ currency: string; currencySymbol: string }>({
-    currency: 'USD',
-    currencySymbol: '$'
+  const [walletConfig, setWalletConfig] = useState<WalletConfig>({ 
+    currency: 'USD', 
+    currencySymbol: '$' 
   });
   
   const referralsPerPage = 5;
@@ -104,24 +101,32 @@ const ReferPage: React.FC<ReferPageProps> = ({ userId, walletConfig }) => {
     return () => unsubscribe();
   }, [userId]);
 
-  // Fetch app config to get commission rate and wallet config
+  // Fetch app config to get commission rate
   useEffect(() => {
     const configRef = ref(database, 'appConfig');
     const unsubscribe = onValue(configRef, (snapshot) => {
       if (snapshot.exists()) {
         const config = snapshot.val() as AppConfig;
         setCommissionRate(config.referralCommissionRate || 10);
-        
-        // Set wallet configuration from app config or use props as fallback
-        if (config.walletConfig) {
-          setAppWalletConfig(config.walletConfig);
-        } else if (walletConfig) {
-          setAppWalletConfig(walletConfig);
-        }
       }
     });
     return () => unsubscribe();
-  }, [walletConfig]);
+  }, []);
+
+  // Fetch wallet config to get currency settings
+  useEffect(() => {
+    const walletConfigRef = ref(database, 'walletConfig');
+    const unsubscribe = onValue(walletConfigRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const config = snapshot.val() as WalletConfig;
+        setWalletConfig({
+          currency: config.currency || 'USD',
+          currencySymbol: config.currencySymbol || '$'
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Fetch referrals
   useEffect(() => {
@@ -170,6 +175,11 @@ const ReferPage: React.FC<ReferPageProps> = ({ userId, walletConfig }) => {
     return total + (referral.commissionEarned || referral.total_balance * (commissionRate / 100));
   }, 0);
 
+  // Format currency display
+  const formatCurrency = (amount: number): string => {
+    return `${walletConfig.currencySymbol}${amount.toFixed(2)}`;
+  };
+
   const botUsername = "dreamearn_26_bot";
   const referralLink = `https://t.me/${botUsername}?start=${userId}`;
   const shareText = encodeURIComponent(`🚀 Join me and earn crypto rewards! Use my referral link: ${referralLink}`);
@@ -189,15 +199,6 @@ const ReferPage: React.FC<ReferPageProps> = ({ userId, walletConfig }) => {
   const prevPage = () => { if (currentPage > 1) setCurrentPage(prev => prev - 1); };
 
   const getCommission = (referral: ReferUser) => referral.commissionEarned || referral.total_balance * (commissionRate / 100);
-
-  // Format currency display
-  const formatCurrency = (amount: number) => {
-    if (appWalletConfig.currencySymbol === '$') {
-      return `$${amount.toFixed(2)}`;
-    } else {
-      return `${appWalletConfig.currency}${amount.toFixed(2)}`;
-    }
-  };
 
   return (
     <div className="px-4 mt-6 space-y-6">

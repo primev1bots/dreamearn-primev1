@@ -51,6 +51,10 @@ interface AppConfig {
   supportUrl: string;
   tutorialVideoId: string;
   referralCommissionRate?: number;
+  walletConfig?: {
+    currency: string;
+    currencySymbol: string;
+  };
 }
 
 // In ReferPage component
@@ -58,15 +62,24 @@ interface ReferPageProps {
   userId: string;
   referralData: ReferralData | null;
   userData?: UserData | null;
+  walletConfig?: {
+    currency: string;
+    currencySymbol: string;
+  };
 }
 
-const ReferPage: React.FC<ReferPageProps> = ({ userId }) => {
+const ReferPage: React.FC<ReferPageProps> = ({ userId, walletConfig }) => {
   const [referrals, setReferrals] = useState<ReferUser[]>([]);
   const [referralStats, setReferralStats] = useState({ referredCount: 0, referralEarnings: 0 });
   const [, setUserData] = useState<UserData | null>(null);
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [commissionRate, setCommissionRate] = useState<number>(10); // Default to 10%
+  const [appWalletConfig, setAppWalletConfig] = useState<{ currency: string; currencySymbol: string }>({
+    currency: 'USD',
+    currencySymbol: '$'
+  });
+  
   const referralsPerPage = 5;
   
   // Use refs to track commission state without causing re-renders
@@ -91,17 +104,24 @@ const ReferPage: React.FC<ReferPageProps> = ({ userId }) => {
     return () => unsubscribe();
   }, [userId]);
 
-  // Fetch app config to get commission rate
+  // Fetch app config to get commission rate and wallet config
   useEffect(() => {
     const configRef = ref(database, 'appConfig');
     const unsubscribe = onValue(configRef, (snapshot) => {
       if (snapshot.exists()) {
         const config = snapshot.val() as AppConfig;
         setCommissionRate(config.referralCommissionRate || 10);
+        
+        // Set wallet configuration from app config or use props as fallback
+        if (config.walletConfig) {
+          setAppWalletConfig(config.walletConfig);
+        } else if (walletConfig) {
+          setAppWalletConfig(walletConfig);
+        }
       }
     });
     return () => unsubscribe();
-  }, []);
+  }, [walletConfig]);
 
   // Fetch referrals
   useEffect(() => {
@@ -170,6 +190,15 @@ const ReferPage: React.FC<ReferPageProps> = ({ userId }) => {
 
   const getCommission = (referral: ReferUser) => referral.commissionEarned || referral.total_balance * (commissionRate / 100);
 
+  // Format currency display
+  const formatCurrency = (amount: number) => {
+    if (appWalletConfig.currencySymbol === '$') {
+      return `$${amount.toFixed(2)}`;
+    } else {
+      return `${appWalletConfig.currencySymbol}${amount.toFixed(2)}`;
+    }
+  };
+
   return (
     <div className="px-4 mt-6 space-y-6">
       {/* Referral Summary Card */}
@@ -188,7 +217,7 @@ const ReferPage: React.FC<ReferPageProps> = ({ userId }) => {
 
           <div className="bg-black/30 rounded-3xl p-5 shadow-lg flex flex-col items-center justify-center hover:scale-105 transition-transform">
             <p className="text-3xl font-extrabold text-white">
-              ${totalCommissionFromReferrals.toFixed(2)}
+              {formatCurrency(totalCommissionFromReferrals)}
             </p>
             <p className="text-[13px] text-white/80 mt-1">Total Commission</p>
           </div>
@@ -245,11 +274,11 @@ const ReferPage: React.FC<ReferPageProps> = ({ userId }) => {
                     <div>
                       <p className="text-sm font-medium text-white">{referral.first_name}</p>
                       <p className="text-xs text-blue-300">Joined: {new Date(referral.joinedAt).toLocaleDateString()}</p>
-                      <p className="text-xs text-green-300">Balance: ${referral.total_balance.toFixed(2)}</p>
+                      <p className="text-xs text-green-300">Balance: {formatCurrency(referral.total_balance)}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-green-400 text-sm font-medium">+${getCommission(referral).toFixed(2)}</div>
+                    <div className="text-green-400 text-sm font-medium">+{formatCurrency(getCommission(referral))}</div>
                     <div className="text-xs text-blue-300">Your {commissionRate}%</div>
                   </div>
                 </div>

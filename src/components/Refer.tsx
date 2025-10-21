@@ -195,7 +195,7 @@ const ReferPage: React.FC<ReferPageProps> = ({ userId, walletConfig }) => {
     if (appWalletConfig.currencySymbol === '$') {
       return `$${amount.toFixed(2)}`;
     } else {
-      return `${appWalletConfig.currencySymbol}${amount.toFixed(2)}`;
+      return `${appWalletConfig.currency}${amount.toFixed(2)}`;
     }
   };
 

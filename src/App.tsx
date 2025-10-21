@@ -2044,15 +2044,14 @@ const MainApp: React.FC = () => {
 
             {/* Developed By Line */}
             <p className="text-center text-xs text-gray-400 mt-4">
-              <a
-                href="" // Replace with your Telegram channel
+              <p            
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1 hover:text-blue-400 transition-colors"
               >
                 <FaTelegramPlane className="w-4 h-4" />
                 Developed By Atlas Lab BD
-              </a>
+              </p>
             </p>
           </div>
         );

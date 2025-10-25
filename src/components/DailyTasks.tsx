@@ -40,7 +40,7 @@ interface DailyTasksProps {
 }
 
 const SERVER_CONFIG = {
-  baseUrl: 'https://dreamearn-primev1-server.onrender.com',
+  baseUrl: 'https://d6dddbc3-5995-4e04-94ef-16627fc12518.e1-us-east-azure.choreoapps.dev',
   endpoints: {
     telegram: '/api/telegram/check-membership',
     connect: '/api/frontend/connect',
